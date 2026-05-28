@@ -1,0 +1,25 @@
+name: pipeline for testing
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+
+  job-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check the code
+        uses: actions/checkout@v3
+
+      - name: do something
+        uses: actions/setup-python@v4
+        with:  
+          python-version: '3.14'
+
+      - name: do something
+        run: pip install fastapi uvicorn
+
+      - name: check uvicorn running
+        run: uvicorn --version
+          
