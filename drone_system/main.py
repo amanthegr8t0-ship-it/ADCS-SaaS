@@ -27,6 +27,9 @@ async def simple_task(ws: WebSocket):
 
 async def simulate_fleet():
     while True:
+        proxima = fleet.check_proximity()
+        if proxima:
+            print(f"Warning these are risky situation {proxima}")
         for i in fleet.get_all_drone():
             if i.battery > 0:
                 print(i.battery)

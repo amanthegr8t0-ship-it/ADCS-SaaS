@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import math
+from config import MIN_DISTANCE
 
 @dataclass
 class Drone:
@@ -50,6 +52,23 @@ class FleetManager():
                 drone.y = y
             return {"Detail": f"Updated Drone with id {id}"}
         return {"Detail": f"Drone with {id} dosen't exist."}
+    
+    def check_proximity(self) -> list[tuple]:
+        drones = list(self.fleet.values()) 
+
+        collision_list = []
+        # collided = []
+        for i in range(len(drones)):
+            for j in range(i+1,len(drones)):
+                stat1, stat2 = drones[i].status, drones[j].status
+                dist = math.sqrt((drones[i].x-drones[j].x)**2 + (drones[i].y-drones[j].y)**2)
+                if dist == 0 and stat1 != "Landed" and stat2 != "Landed":
+                    collision_list.append((drones[i].id, drones[j].id))
+                elif dist <= MIN_DISTANCE and stat1 != "Landed" and stat2 != "Landed" :
+                    
+                    collision_list.append((drones[i].id, drones[j].id))
+        return collision_list
+            
 
 if __name__ == "__main__":
     drone_1 = Drone(id=23, x=2.3, y=2.4, battery=53.0)

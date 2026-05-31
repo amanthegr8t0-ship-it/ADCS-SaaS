@@ -1,0 +1,1 @@
+MIN_DISTANCE = 10
