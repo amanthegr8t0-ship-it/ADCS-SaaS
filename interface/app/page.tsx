@@ -32,9 +32,11 @@ useEffect(() => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       ctx.clearRect(0, 0, 800, 600);
+      const scaleX = 800 / 200;
+      const scaleY = 600 / 200;
         fleet.forEach((drone) => {
             ctx.beginPath();
-            ctx.arc(drone.x * 4, drone.y * 4, 8, 0, Math.PI * 2);
+            ctx.arc(drone.x * scaleX, drone.y * scaleY, 8, 0, Math.PI * 2);
             ctx.fillStyle = "lime";
             ctx.fill();
 });
