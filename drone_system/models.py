@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 from config import MIN_DISTANCE
 
@@ -12,6 +12,7 @@ class Drone:
     heading:float = 0.0
     target_x:float = 0.0
     target_y:float = 0.0
+    intermediate_steps: list = field(default_factory=list)
 
 class FleetManager():
     def __init__(self):

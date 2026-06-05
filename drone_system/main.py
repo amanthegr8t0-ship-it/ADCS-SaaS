@@ -4,11 +4,16 @@ import json
 import asyncio
 import redis
 import math
+from path import AStar, Grid_Maker
+
 
 fleet = FleetManager()
 fleet.add_drone(Drone(id=1, x=3.5, y=8.4,target_x=89.8, target_y=100.2))
 fleet.add_drone(Drone(id=2, x=6.3, y=2.7, target_x=45.8, target_y=19.2))
 fleet.add_drone(Drone(id=3, x=3.6, y=4.4, target_x=79.8, target_y=187.2))
+
+moving_grid = Grid_Maker(grid_order=400)
+interm = AStar(moving_grid)
 
 app = FastAPI()
 redis_client = redis.asyncio.Redis(host="localhost", port=6379, db=0, decode_responses=True)
@@ -26,7 +31,7 @@ async def simple_task(ws: WebSocket):
         if message["type"] == "message":
             lst = message["data"]
             await ws.send_text(lst)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)
 
 async def simulate_fleet():
     while True:
@@ -37,7 +42,7 @@ async def simulate_fleet():
             if i.battery > 0:
                 print(i.battery)
                 simulate_movement(i)
-                curr_battery = i.battery - 0.5
+                curr_battery = i.battery - 0.25
                 fleet.update_drone(id=i.id, battery = curr_battery)
             else:
                 fleet.update_drone(id=i.id, status="Landed")
@@ -49,20 +54,27 @@ async def simulate_fleet():
             lst.append(fleet_telemetry)
 
         await redis_client.publish("fleet_telemetry", json.dumps(lst))
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
 
 def simulate_movement(drone):
-    step_size = 0.5
-    
+
+    col = int(drone.x//0.5)
+    row = int(drone.y//0.5)
+    tar_col = int(drone.target_x//0.5)
+    tar_row = int(drone.target_y//0.5)
+    if not drone.intermediate_steps:
+        drone.intermediate_steps = interm.find_path((col, row), (tar_col, tar_row))
     dx = drone.target_x-drone.x
     dy = drone.target_y-drone.y
     dist = math.sqrt(dx**2 + dy**2)
+
     if drone.battery > 0:
         if dist > 0.5:
-            xpos = drone.x + (dx/dist)*step_size
-            ypos = drone.y + (dy/dist)*step_size
-            fleet.update_drone(id=drone.id, x=xpos, y=ypos)
-            print(f"drone at {xpos},{ypos}")
+            stepsx, stepsy = drone.intermediate_steps.pop(0)
+            stx = stepsx*0.5
+            sty = stepsy*0.5
+            fleet.update_drone(id=drone.id, x=stx, y=sty)
+            print(f"drone at {stepsx},{stepsy}")
             if drone.battery <= 20 :
                 print("critical")
 
@@ -81,7 +93,4 @@ def get_fleet_status():
 @app.get("/drone/{drone_id}")
 def get_drone_telemetry(drone_id : int):
     
-    return fleet.get_drone(drone_id)
-    
-        # raise HTTPException(status_code=404, detail="Drone not found")
-        
+    return fleet.get_drone(drone_id)        
