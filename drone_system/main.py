@@ -1,4 +1,5 @@
 from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from models import Drone, FleetManager
 import json
 import asyncio
@@ -6,6 +7,7 @@ import redis
 import math
 from path import AStar, Grid_Maker
 from pydantic import BaseModel
+from config import API_URL
 
 
 fleet = FleetManager()
@@ -18,11 +20,18 @@ class connection(BaseModel):
     tarx: float
     tary: float
 
-moving_grid = Grid_Maker(grid_order=400)
-interm = AStar(moving_grid)
-
 app = FastAPI()
 redis_client = redis.asyncio.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+moving_grid = Grid_Maker(grid_order=400)
+interm = AStar(moving_grid)
 
 @app.on_event("startup")
 async def start_baground_simulation():
@@ -49,7 +58,7 @@ async def simulate_fleet():
                 if i.battery > 0:
                     print(i.battery)
                     simulate_movement(i)
-                    curr_battery = i.battery - 0.25
+                    curr_battery = i.battery - 0.125
                     fleet.update_drone(id=i.id, battery = curr_battery)
                 else:
                     fleet.update_drone(id=i.id, status="Landed")
@@ -87,7 +96,7 @@ def simulate_movement(drone):
                     stepsx, stepsy = drone.intermediate_steps.pop(0)
                     stx = stepsx*0.5
                     sty = stepsy*0.5
-                    fleet.update_drone(id=drone.id, x=stx, y=sty)
+                    fleet.update_drone(id=drone.id, x=stx, y=sty, status="On Air")
                     print(f"drone{drone.id} at {stepsx},{stepsy}")
                     if drone.battery <= 20 :
                         print("critical")
@@ -119,6 +128,7 @@ def get_obstacle_info(col:int, row:int):
 
 @app.post("/assign-mission")
 async def assign_mission(request:connection):
+    
     iid = fleet.get_drone(request.Droneid)
     # Option 1 - check the type
     if not isinstance(iid, Drone):
@@ -133,10 +143,10 @@ async def assign_mission(request:connection):
     estimated_cost = cost*0.25
     required_cost = estimated_cost*1.20
     if iid.battery >= required_cost:
-        fleet.update_drone(iid.id, tarx=request.tarx, tary=request.tary)
+        fleet.update_drone(iid.id, tarx=request.tarx, tary=request.tary, status="idle")
         iid.intermediate_steps.clear()
-        simulate_movement(iid)
-        return "Mission Assignment Completion."
+        eta = len(path) * 0.1
+        return f"Mission Assignment Complete. it will take {eta}sec."
     else:
         raise HTTPException(status_code=400, detail="Battery not sufficient.")
     

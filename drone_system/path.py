@@ -32,7 +32,7 @@ class AStar:
     
     def find_path(self, start, goal):
         if start == goal:
-            return [start]
+            return [], 0
         open_set = []
         heapq.heappush(open_set, (0,start))
         closed_set = set()
