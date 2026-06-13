@@ -26,7 +26,7 @@ class AStar:
         valid = []
         for n_col, n_row in all_neighbours:
             if n_row >= 0 and n_col >= 0 and n_row < self.grid.grid_or and n_col < self.grid.grid_or and self.grid.available_cell(n_col, n_row) :
-                valid.append((n_col, n_row))
+                valid.append((n_col, n_row)) 
 
         return valid
     
@@ -80,7 +80,7 @@ class AStar:
                     # calculate h, calculate f, push to open_set
                     heapq.heappush(open_set, (f, neighbour))
 
-        return []
+        return([], 0)
 
 if __name__ == "__main__":
     grid = Grid_Maker()

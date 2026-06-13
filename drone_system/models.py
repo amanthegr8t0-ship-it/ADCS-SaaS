@@ -71,6 +71,22 @@ class FleetManager():
         return collision_list
             
 
+    def predict_congestion(self):
+        drones = list(self.fleet.values()) 
+        congestion_dict = []
+        for i in range(len(drones)):
+            if drones[i].status != "On Air":
+                continue
+            for j in range(i+1, len(drones)):
+                if drones[j].status != "On Air":
+                    continue
+                for step_index , (apos, bpos) in enumerate(zip(drones[i].intermediate_steps, drones[j].intermediate_steps)):
+                    dist = math.sqrt((bpos[0]-apos[0])**2 + (bpos[1]-apos[1])**2)
+                    time = step_index*0.1
+                    if dist <= 2:
+                        congestion_dict.append({"id1":drones[i].id, "id2":drones[j].id, "time":round(time, 2), "step":step_index})
+        return congestion_dict 
+
 if __name__ == "__main__":
     drone_1 = Drone(id=23, x=2.3, y=2.4, battery=53.0)
     print(drone_1)
