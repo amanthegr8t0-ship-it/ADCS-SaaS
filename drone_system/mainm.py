@@ -8,7 +8,7 @@ import math
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer, TopicPartition
 import logging
 from path import AStar, Grid_Maker
-from pydantic import BaseModel
+from pydantic import BaseModel 
 from config import API_URL
 import time
 
@@ -22,7 +22,7 @@ fleet.add_drone(Drone(id=1, x=3.5, y=8.4, status="idle"))
 fleet.add_drone(Drone(id=2, x=6.3, y=2.7, status="idle"))
 fleet.add_drone(Drone(id=3, x=3.6, y=4.4, status="idle"))
 
-class connection(BaseModel):
+class connection(BaseModel): 
     Droneid: int
     tarx: float
     tary: float
@@ -69,6 +69,7 @@ async def simple_task(ws: WebSocket):
     finally:
         await pubsub.unsubscribe("fleet_telemetry")
 
+
 async def simulate_fleet():
     while True:
         proxima = fleet.check_proximity()
@@ -92,6 +93,7 @@ async def simulate_fleet():
             fleet_telemetry = {"id": i.id, "x": i.x, "y": i.y, "battery": i.battery, "status": i.status}
             
             lst.append(fleet_telemetry) 
+            await fleet.save_drone_to_redis(i, redis_client)
         try:
             await kafka_producer.send("drone-telemetry", value=json.dumps(lst).encode("utf-8"))
             await redis_client.publish("fleet_telemetry", json.dumps(lst))
@@ -212,7 +214,7 @@ async def replay(topic: str, ws: WebSocket, start_time_ms: int):
         else:
             # The requested time is in the future. Don't crash, just seek to the end.
             await kafka_consumer.seek_to_end(tp)
-        kafka_consumer.seek(tp, offset)
+        
         async for messages in kafka_consumer:
             message = messages.value
             await ws.send_text(message.decode("utf-8"))

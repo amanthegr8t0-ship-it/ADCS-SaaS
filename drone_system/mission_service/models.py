@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import math
-from config import MIN_DISTANCE
+import json
+from config import MIN_DISTANCE, DANGER_DISTANCE, CONGESTION_DISTANCE
 
 @dataclass
 class Drone:
@@ -80,13 +81,25 @@ class FleetManager():
             for j in range(i+1, len(drones)):
                 if drones[j].status != "On Air":
                     continue
+                threshold_dist = math.sqrt((drones[i].x-drones[j].x)**2 + (drones[i].y-drones[j].y)**2)
+                if threshold_dist > DANGER_DISTANCE:
+                    continue
                 for step_index , (apos, bpos) in enumerate(zip(drones[i].intermediate_steps, drones[j].intermediate_steps)):
-                    dist = math.sqrt((bpos[0]-apos[0])**2 + (bpos[1]-apos[1])**2)
+                    congestionchecking_dist = math.sqrt((bpos[0]-apos[0])**2 + (bpos[1]-apos[1])**2)
                     time = step_index*0.1
-                    if dist <= 2:
+                    if congestionchecking_dist <= CONGESTION_DISTANCE:
                         congestion_dict.append({"id1":drones[i].id, "id2":drones[j].id, "time":round(time, 2), "step":step_index})
-        return congestion_dict 
+        return congestion_dict
+    
+    async def save_drone_to_redis(self, drone, redis_client): 
+        await redis_client.set(f"drone:{drone.id}", json.dumps({"id": drone.id, "x": drone.x, "y": drone.y, "battery": drone.battery, "status": drone.status, "intermediate_steps":drone.intermediate_steps}) )
+        
+    async def load_drone_from_redis(self, droneid, redis_client):
+        did = await redis_client.get(f"drone:{droneid}")
+        if did is not None: 
+            drone_obj = json.loads(did)
+            return Drone(**drone_obj)
 
 if __name__ == "__main__":
     drone_1 = Drone(id=23, x=2.3, y=2.4, battery=53.0)
-    print(drone_1)
+    print(drone_1) 

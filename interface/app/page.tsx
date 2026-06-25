@@ -103,7 +103,7 @@ useEffect(() => {
       });
       if (response.ok) {
         const data = await response.json();
-        setTrackStatus(data);
+        setTrackStatus(typeof data === "string" ? data : data.detail || JSON.stringify(data));
         setDroneid("");
         setTargetx("");
         setTargety("");
