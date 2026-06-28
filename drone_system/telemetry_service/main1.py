@@ -57,8 +57,8 @@ async def simulate_fleet():
             conflicting_path_dict = {}
             # future_path = []
             for i in congestion_risk:
-                if i["id1"] > i["id2"]:
-                    conflicting_path_dict.setdefault(i["id1"], []).append(i["path_of_drone_2"])
+                
+                conflicting_path_dict.setdefault(i["id1"], []).append(i["path_of_drone_2"])
             for i in conflicting_path_dict:
                 path_to_be_changed = i
                 drone = fleet.get_drone(path_to_be_changed)
