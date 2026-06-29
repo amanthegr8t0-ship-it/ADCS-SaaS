@@ -82,35 +82,41 @@ async def assign_mission(request:connection):
     estimated_cost = cost*0.25
     required_cost = estimated_cost*1.20
     if iid.battery >= required_cost:
-        await kafka_producer.send("drone-missions", value=mission_value)
-        eta = len(path) * 0.1
-        sec = round(eta, 2)
-        #Aurora logging
-        async with AsyncSessionLocal() as session:
-            async with session.begin():
-                mission_log = MissionLog(
-                    drone_id=request.Droneid,
-                    customer_id="default_customer",
-                    start_x=iid.x,
-                    start_y=iid.y,
-                    target_x=request.tarx,
-                    target_y=request.tary,
-                    distance=round(cost, 2),
-                    battery_consumed=round(required_cost, 2),
-                    eta_seconds=sec,
-                    status="assigned"
-                )
-                session.add(mission_log)
-                await session.flush()
+        try:
+            await kafka_producer.send("drone-missions", value=mission_value)
+            eta = len(path) * 0.1
+            sec = round(eta, 2)
+            #Aurora logging
+            async with AsyncSessionLocal() as session:
+                async with session.begin():
+                    mission_log = MissionLog(
+                        drone_id=request.Droneid,
+                        customer_id="default_customer",
+                        start_x=iid.x,
+                        start_y=iid.y,
+                        target_x=request.tarx,
+                        target_y=request.tary,
+                        distance=round(cost, 2),
+                        battery_consumed=round(estimated_cost, 2),
+                        eta_seconds=sec,
+                        status="assigned"
+                    )
+                    session.add(mission_log)
+                    await session.flush()
 
-                billing = BillingRecord(
-                    customer_id="default_customer",
-                    drone_id=request.Droneid,
-                    mission_id=mission_log.id,
-                    units_consumed=round(required_cost * 0.1, 4)
-                )
-                session.add(billing)
-        return f"Mission Assignment Complete. it will take about {sec}sec."
+                    billing = BillingRecord(
+                        customer_id="default_customer",
+                        drone_id=request.Droneid,
+                        mission_id=mission_log.id,
+                        units_consumed=round(estimated_cost * 0.1, 4)
+                    )
+                    session.add(billing)
+            return f"Mission Assignment Complete. it will take about {sec}sec."
+        
+        except Exception as e:
+            print("MISSION ERROR:", repr(e))
+            raise HTTPException(status_code=500, detail=str(e))
+
     else:
         raise HTTPException(status_code=400, detail="Battery not sufficient.")
     

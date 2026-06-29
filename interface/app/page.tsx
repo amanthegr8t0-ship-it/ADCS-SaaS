@@ -51,19 +51,21 @@ export default function DroneMap() {
   const [missions, setMissions] = useState<MissionLog[]>([]);
   const [billing, setBilling] = useState<BillingRecord[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(false);
+  const [category, setCategory] = useState("Light Cargo (5kg)");
+  const [quantity, setQuantity] = useState<number>(1);
 
   // Auto-fetch from Aurora when tabs are switched
   useEffect(() => {
     if (activeTab === "MissionHistory") {
       setIsDbLoading(true);
-      fetch("http://localhost:8000/missions")
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/missions`)
         .then(res => res.json())
         .then(data => setMissions(data))
         .catch(err => console.error("Mission fetch error:", err))
         .finally(() => setIsDbLoading(false));
     } else if (activeTab === "Billing") {
       setIsDbLoading(true);
-      fetch("http://localhost:8000/billing")
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/billing`)
         .then(res => res.json())
         .then(data => setBilling(data))
         .catch(err => console.error("Billing fetch error:", err))
@@ -92,11 +94,11 @@ useEffect(() => {
 
     if (!isReplayMode) {
       // LIVE MODE
-      ws = new WebSocket("ws://localhost:8000/ws");
+      ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
     } else {
       // REPLAY MODE: Only connect if they actually locked in a time
       if (activeReplayTime) {
-        ws = new WebSocket(`ws://localhost:8000/ws/replay?topic=drone-telemetry&start_time_ms=${activeReplayTime}`);
+        ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws/replay?topic=drone-telemetry&start_time_ms=${activeReplayTime}`);
       }
     }
 
@@ -135,7 +137,7 @@ useEffect(() => {
   useEffect(() => {
   const fetchAlerts = async () => {
     try {
-      const res = await fetch("http://localhost:8000/predict-congestion");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict-congestion`);
       const data = await res.json();
       setCongestionAlerts(data.predictions);
       setLastAlertFetch(new Date().toLocaleTimeString());
@@ -156,7 +158,7 @@ useEffect(() => {
     setTrackStatus("Please fill in all fields.");
     return;
 }
-      const response = await fetch("http://localhost:8000/assign-mission", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assign-mission`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
