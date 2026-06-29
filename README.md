@@ -1,6 +1,6 @@
 # 🛸 Autonomous Drone Control System
 
-A cloud-native autonomous drone coordination platform where simulated drones make local decisions, coordinate with each other, optimize routes using AI, stream telemetry in real time, operate under intermittent connectivity, and record critical actions on a blockchain for trust and verification.
+A cloud-native autonomous drone coordination platform where simulated drones make local decisions, coordinate with each other, optimize routes using AI, stream telemetry in real time , operate under intermittent connectivity, and record critical actions on a blockchain for trust and verification.
 
 > Built as a learning project by a first-year BS Data Science student at IIT Madras — documenting the journey of building production-grade distributed systems from scratch.
 
