@@ -45,4 +45,6 @@ services:
       depends_on:
         - kafka
         - redis
+      environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:A1M13A1N14p@database-1.cluster-cqrueqomkqx2.us-east-1.rds.amazonaws.com:5432/postgres
   

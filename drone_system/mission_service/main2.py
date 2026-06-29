@@ -5,9 +5,12 @@ import redis
 import json
 import asyncio
 from aiokafka import AIOKafkaProducer
-
+from sqlalchemy import select
 from models import Drone, FleetManager
 from path import AStar, Grid_Maker
+from database import init_db, AsyncSessionLocal
+from models_db import MissionLog, BillingRecord
+
 
 
 app = FastAPI()
@@ -45,6 +48,11 @@ async def start_background_simulation():
         except Exception as e:
             print(f"Kafka not ready yet, retrying in 3 seconds... Error: {e}")
             await asyncio.sleep(3)
+    try:
+        await init_db()
+        print("Aurora connected successfully.")
+    except Exception as e:
+        print(f"Aurora unavailable, skipping DB init: {repr(e)}")
 
 @app.get("/")
 def mission_health_check():
@@ -77,9 +85,79 @@ async def assign_mission(request:connection):
         await kafka_producer.send("drone-missions", value=mission_value)
         eta = len(path) * 0.1
         sec = round(eta, 2)
+        #Aurora logging
+        async with AsyncSessionLocal() as session:
+            async with session.begin():
+                mission_log = MissionLog(
+                    drone_id=request.Droneid,
+                    customer_id="default_customer",
+                    start_x=iid.x,
+                    start_y=iid.y,
+                    target_x=request.tarx,
+                    target_y=request.tary,
+                    distance=round(cost, 2),
+                    battery_consumed=round(required_cost, 2),
+                    eta_seconds=sec,
+                    status="assigned"
+                )
+                session.add(mission_log)
+                await session.flush()
+
+                billing = BillingRecord(
+                    customer_id="default_customer",
+                    drone_id=request.Droneid,
+                    mission_id=mission_log.id,
+                    units_consumed=round(required_cost * 0.1, 4)
+                )
+                session.add(billing)
         return f"Mission Assignment Complete. it will take about {sec}sec."
     else:
         raise HTTPException(status_code=400, detail="Battery not sufficient.")
+    
+
+@app.get("/missions")
+async def get_missions():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MissionLog).order_by(MissionLog.created_at.desc()).limit(50)
+        )
+        missions = result.scalars().all()
+        return [
+            {
+                "id": m.id,
+                "drone_id": m.drone_id,
+                "customer_id": m.customer_id,
+                "start_x": m.start_x,
+                "start_y": m.start_y,
+                "target_x": m.target_x,
+                "target_y": m.target_y,
+                "distance": m.distance,
+                "battery_consumed": m.battery_consumed,
+                "eta_seconds": m.eta_seconds,
+                "status": m.status,
+                "created_at": str(m.created_at),
+            }
+            for m in missions
+        ]
+    
+@app.get("/billing")
+async def get_billing():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(BillingRecord).order_by(BillingRecord.created_at.desc()).limit(50)
+        )
+        records = result.scalars().all()
+        return [
+            {
+                "id": r.id,
+                "customer_id": r.customer_id,
+                "drone_id": r.drone_id,
+                "mission_id": r.mission_id,
+                "units_consumed": r.units_consumed,
+                "created_at": str(r.created_at),
+            }
+            for r in records
+        ]
     
 @app.get("/predict-congestion")
 async def predict_congestion():

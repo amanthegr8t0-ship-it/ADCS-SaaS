@@ -4,3 +4,5 @@ pydantic
 redis
 aiokafka
 numpy
+sqlalchemy
+asyncpg

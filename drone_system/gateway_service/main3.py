@@ -64,6 +64,24 @@ async def assign_mission(request: connection):
         return JSONResponse (status_code=response.status_code,
             content=response.json())
 
+@app.get("/predict-congestion")
+async def predict_congestion():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("http://mission-service:8000/predict-congestion")
+        return JSONResponse(status_code=response.status_code, content=response.json())
+
+@app.get("/missions")
+async def get_missions():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("http://mission-service:8000/missions")
+        return JSONResponse(status_code=response.status_code, content=response.json())
+
+@app.get("/billing")
+async def get_billing():
+    async with httpx.AsyncClient() as client:
+        response = await client.get("http://mission-service:8000/billing")
+        return JSONResponse(status_code=response.status_code, content=response.json())
+
 @app.get("/drone/{drone_id}")
 async def get_drone_telemetry(drone_id : int):
     return await fleet.load_drone_from_redis(drone_id, redis_client)  
