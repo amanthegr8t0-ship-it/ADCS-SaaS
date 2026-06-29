@@ -59,14 +59,14 @@ export default function DroneMap() {
   useEffect(() => {
     if (activeTab === "MissionHistory") {
       setIsDbLoading(true);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/missions`)
+      fetch(`/api/missions`)
         .then(res => res.json())
         .then(data => setMissions(data))
         .catch(err => console.error("Mission fetch error:", err))
         .finally(() => setIsDbLoading(false));
     } else if (activeTab === "Billing") {
       setIsDbLoading(true);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/billing`)
+      fetch(`/api/billing`)
         .then(res => res.json())
         .then(data => setBilling(data))
         .catch(err => console.error("Billing fetch error:", err))
@@ -93,14 +93,17 @@ export default function DroneMap() {
 useEffect(() => {
     let ws: WebSocket | null = null;
 
-    if (!isReplayMode) {
-      // LIVE MODE
-      ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws`);
-    } else {
-      // REPLAY MODE: Only connect if they actually locked in a time
-      if (activeReplayTime) {
-        ws = new WebSocket(`${process.env.NEXT_PUBLIC_WS_URL}/ws/replay?topic=drone-telemetry&start_time_ms=${activeReplayTime}`);
+    try {
+      if (!isReplayMode) {
+        ws = new WebSocket(`ws://13.220.128.77:8000/ws`);
+      } else {
+        if (activeReplayTime) {
+          ws = new WebSocket(`ws://13.220.128.77:8000/ws/replay?topic=drone-telemetry&start_time_ms=${activeReplayTime}`);
+        }
       }
+    } catch (e) {
+      console.warn("WebSocket blocked (mixed content):", e);
+      setWsStatus("WS unavailable (HTTPS)");
     }
 
     if (ws) {
@@ -109,8 +112,6 @@ useEffect(() => {
         setFleet(data);
       };
       
-      ws.onopen = () => console.log(isReplayMode ? "Replay WS Connected" : "Live WS Connected");
-      ws.onerror = (error) => console.log("WebSocket error", error);
       ws.onopen = () => setWsStatus(isReplayMode ? "Replaying ⏪" : "Live 🟢");
       
       ws.onclose = (event) => {
@@ -119,12 +120,10 @@ useEffect(() => {
       
       ws.onerror = (error) => {
         console.log("WebSocket error", error);
-        setWsStatus("WebSocket Error!");
+        setWsStatus("WS unavailable (HTTPS)");
       };
     }
-    
-    
-    // Proper cleanup that always runs
+
     return () => {
       if (ws) ws.close();
     };
@@ -141,7 +140,7 @@ useEffect(() => {
   useEffect(() => {
   const fetchAlerts = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict-congestion`);
+      const res = await fetch(`/api/predict-congestion`);
       const data = await res.json();
       setCongestionAlerts(Array.isArray(data) ? data : data.predictions ?? []);
       setLastAlertFetch(new Date().toLocaleTimeString());
@@ -162,7 +161,7 @@ useEffect(() => {
     setTrackStatus("Please fill in all fields.");
     return;
 }
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assign-mission`, {
+      const response = await fetch(`/api/assign-mission`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
