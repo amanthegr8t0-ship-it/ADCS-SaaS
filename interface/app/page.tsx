@@ -32,7 +32,6 @@ interface BillingRecord {
   units_consumed: number;
   created_at: string;
 }
-
 export default function DroneMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fleet, setFleet] = useState<Drone[]>([]);
@@ -54,6 +53,7 @@ export default function DroneMap() {
   const [isDbLoading, setIsDbLoading] = useState(false);
   const [category, setCategory] = useState("Light Cargo (5kg)");
   const [quantity, setQuantity] = useState<number>(1);
+  const [isSafe, setIsSafe] = useState(false);
 
   // Auto-fetch from Aurora when tabs are switched
   useEffect(() => {
@@ -130,7 +130,10 @@ useEffect(() => {
     };
   }, [isReplayMode, activeReplayTime]);
 
-  useEffect(() => { setIsMounted(true); }, []);
+  useEffect(() => { 
+  setIsMounted(true);
+  setIsSafe(true);
+}, []);
 
   const maxTime = Date.now();
   const minTime = maxTime-5*60*1000;
@@ -140,7 +143,7 @@ useEffect(() => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/predict-congestion`);
       const data = await res.json();
-      setCongestionAlerts(data.predictions);
+      setCongestionAlerts(Array.isArray(data) ? data : data.predictions ?? []);
       setLastAlertFetch(new Date().toLocaleTimeString());
     } catch (e) {
       console.error("Alert fetch failed", e);
@@ -185,8 +188,10 @@ useEffect(() => {
     ; // <-- These dependencies trigger the rebuild
   };
 
-  return (
-    <div style={{ paddingBottom: "100px" }}>
+if (!isSafe) return null;
+
+return (
+  <div style={{ paddingBottom: "100px" }}>
       
       {/* NAVIGATION BAR */}
       <div className="flex justify-center gap-4 p-4 bg-zinc-900 border-b border-zinc-800 shadow-lg">
